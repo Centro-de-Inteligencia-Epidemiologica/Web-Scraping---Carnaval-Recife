@@ -1,0 +1,24 @@
+# --- Secrets / session ---
+# ig_state.json IS the login token (cookies). NEVER commit it.
+ig_state.json
+*_state.json
+
+# --- Scraped data / outputs ---
+*.csv
+*.xlsx
+stories_media/
+debug_*.png
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
