@@ -1,0 +1,18 @@
+# Core scraping + local-LLM extraction pipeline.
+# Tested with Python 3.11/3.12 on Windows.
+#
+# After installing, run once:   python -m playwright install chromium
+playwright>=1.44
+scrapegraphai>=1.27
+pandas>=2.0
+requests>=2.31
+
+# scrapegraphai pulls in langchain + the ollama integration transitively,
+# but pin them explicitly so a fresh env resolves cleanly.
+langchain-community>=0.3
+langchain-ollama>=0.2
+nest-asyncio>=1.6        # lets the async cells run inside Jupyter
+
+# Desktop GUI + Excel export
+PySide6>=6.6            # Qt UI (gui_app.py)
+openpyxl>=3.1          # .xlsx export
