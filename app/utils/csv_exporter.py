@@ -5,7 +5,8 @@ from typing import List
 from app.llm.analyzer import AnalysisResult
 
 COLUMNS = [
-    "username",
+    "author",
+    "source_account",
     "city",
     "content_type",
     "probability",
@@ -24,7 +25,8 @@ def export(results: List[AnalysisResult], path: str) -> int:
         writer.writeheader()
         for r in results:
             writer.writerow({
-                "username": r.username,
+                "author": r.author,
+                "source_account": r.source_account,
                 "city": r.city,
                 "content_type": r.content_type,
                 "probability": r.probability,

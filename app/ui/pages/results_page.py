@@ -20,14 +20,20 @@ _PROB_STYLE = {
 }
 
 _COLUMNS = [
-    ("Conta",        "username",        180),
-    ("Cidade",       "city",            120),
+    ("Autor",        "author",          150),
+    ("Conta-fonte",  "source_account",  150),
+    ("Cidade",       "city",            110),
     ("Tipo",         "content_type",     70),
     ("Prob.",        "_prob_label",      90),
     ("Motivo",       "reason",          200),
-    ("Texto",        "text",            320),
+    ("Texto",        "text",            300),
     ("URL",          "url",             200),
 ]
+
+# Column indices used for special handling.
+_PROB_COL = 4
+_TEXT_COL = 6
+_URL_COL = 7
 
 
 class ResultsPage(QWidget):
@@ -61,7 +67,7 @@ class ResultsPage(QWidget):
         for idx, (_, _, width) in enumerate(_COLUMNS):
             if width:
                 self.table.setColumnWidth(idx, width)
-        hh.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)  # Text column
+        hh.setSectionResizeMode(_TEXT_COL, QHeaderView.ResizeMode.Stretch)  # Text column
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setAlternatingRowColors(True)
@@ -82,7 +88,8 @@ class ResultsPage(QWidget):
         prob_label, prob_color = _PROB_STYLE.get(result.probability, ("?", "#ffffff"))
 
         values = [
-            result.username,
+            result.author,
+            result.source_account,
             result.city,
             result.content_type,
             prob_label,
@@ -94,7 +101,7 @@ class ResultsPage(QWidget):
         for col, val in enumerate(values):
             item = QTableWidgetItem(val)
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-            if col == 3:  # probability column
+            if col == _PROB_COL:
                 item.setBackground(QColor(prob_color))
             self.table.setItem(row, col, item)
 
@@ -123,6 +130,6 @@ class ResultsPage(QWidget):
         QMessageBox.information(self, "Exportado", f"{n} linhas salvas em:\n{path}")
 
     def _open_url(self, row: int, _col: int):
-        url_item = self.table.item(row, 6)
+        url_item = self.table.item(row, _URL_COL)
         if url_item:
             QDesktopServices.openUrl(QUrl(url_item.text()))

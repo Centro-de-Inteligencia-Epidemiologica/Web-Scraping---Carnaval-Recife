@@ -1,4 +1,5 @@
 import asyncio
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,11 +11,48 @@ from playwright.async_api import async_playwright, BrowserContext, Page, Timeout
 @dataclass
 class ContentItem:
     url: str
-    username: str
-    content_type: str  # "post" | "story" | "reel"
+    author: str           # the real content creator (original poster)
+    source_account: str   # the monitored page where it was found
+    content_type: str     # "post" | "story" | "reel"
     text: str = ""
     location: str = ""
     image_bytes: Optional[bytes] = None
+
+
+# Instagram post/reel URLs look like /<author>/p/<id>/ or /<author>/reel/<id>/.
+# Bare /p/<id>/ or /reel/<id>/ means the author is the account being viewed.
+_URL_AUTHOR_RE = re.compile(r"instagram\.com/([^/]+)/(?:p|reel)/", re.IGNORECASE)
+_RESERVED_PATHS = {"p", "reel", "reels", "stories", "explore", "tv"}
+
+
+def _author_from_url(url: str) -> str:
+    m = _URL_AUTHOR_RE.search(url)
+    if m:
+        handle = m.group(1).strip().lstrip("@")
+        if handle and handle.lower() not in _RESERVED_PATHS:
+            return handle
+    return ""
+
+
+def _author_from_caption(text: str) -> str:
+    """Instagram og:description starts with e.g.
+    '12 likes, 3 comments - queronewspe on June 18, 2026: "..."' or
+    'queronewspe on June 18, 2026: "..."'. Pull the handle out of that.
+    """
+    if not text:
+        return ""
+    head = text.split(":", 1)[0]
+    if " - " in head:
+        head = head.split(" - ", 1)[1]
+    for sep in (" on ", " no ", " em "):
+        if sep in head:
+            head = head.split(sep, 1)[0]
+            break
+    handle = head.strip().lstrip("@")
+    # A handle has no spaces; if we still have a phrase, it's not a handle.
+    if handle and " " not in handle and len(handle) <= 40:
+        return handle
+    return ""
 
 
 _UA = (
@@ -311,7 +349,8 @@ class InstagramScraper:
                 items.append(
                     ContentItem(
                         url=url,
-                        username=username,
+                        author=username,          # a story belongs to the account itself
+                        source_account=username,
                         content_type="story",
                         text=(text or "").strip(),
                         image_bytes=img_bytes,
@@ -408,24 +447,36 @@ class InstagramScraper:
         self,
         page: Page,
         url: str,
-        username: str,
+        source_account: str,
         content_type: str,
     ) -> Optional[ContentItem]:
         await page.goto(url, wait_until="domcontentloaded", timeout=25_000)
         await page.wait_for_timeout(1_500)
 
-        # Caption via og:description (most reliable)
-        text = await page.evaluate(
+        # Caption + og:image URL + handle, all from meta tags (most reliable).
+        meta = await page.evaluate(
             """() => {
-                const og = document.querySelector('meta[property="og:description"]');
-                if (og) return og.getAttribute('content') || '';
-                const h1s = document.querySelectorAll('article h1, main h1');
-                for (const h of h1s) {
-                    if (h.innerText.trim()) return h.innerText.trim();
+                const get = (sel, attr) => {
+                    const el = document.querySelector(sel);
+                    return el ? (el.getAttribute(attr) || '') : '';
+                };
+                let text = get('meta[property="og:description"]', 'content');
+                if (!text) {
+                    const h1 = document.querySelector('article h1, main h1');
+                    if (h1) text = h1.innerText.trim();
                 }
-                return '';
+                return {
+                    text: text,
+                    image: get('meta[property="og:image"]', 'content'),
+                };
             }"""
         )
+        text = (meta.get("text") or "").strip()
+        og_image = (meta.get("image") or "").strip()
+
+        # Real author: prefer the URL handle, fall back to the caption header,
+        # finally fall back to the account we are scraping.
+        author = _author_from_url(url) or _author_from_caption(text) or source_account
 
         # Location link
         location = await page.evaluate(
@@ -435,22 +486,40 @@ class InstagramScraper:
             }"""
         )
 
-        # Image/video screenshot
+        # Image bytes for the vision model. Fetching og:image via the API
+        # request context is far more robust than DOM screenshots (which broke
+        # on Instagram's current markup) and returns the real media, not a
+        # cropped screenshot. Falls back to an element screenshot.
         img_bytes: Optional[bytes] = None
-        try:
-            el = await page.query_selector("article img[alt]")
-            if el is None:
-                el = await page.query_selector("video")
-            if el:
-                img_bytes = await el.screenshot(type="jpeg", quality=70)
-        except Exception:
-            pass
+        if og_image:
+            try:
+                resp = await page.request.get(og_image, timeout=20_000)
+                if resp.ok:
+                    body = await resp.body()
+                    if body:
+                        img_bytes = body
+            except Exception:
+                pass
+        if img_bytes is None:
+            try:
+                el = (
+                    await page.query_selector("article img[src*='cdninstagram'], "
+                                              "article img[src*='fbcdn']")
+                    or await page.query_selector("article img")
+                    or await page.query_selector("img[src*='cdninstagram'], img[src*='fbcdn']")
+                    or await page.query_selector("video")
+                )
+                if el:
+                    img_bytes = await el.screenshot(type="jpeg", quality=70)
+            except Exception:
+                pass
 
         return ContentItem(
             url=url,
-            username=username,
+            author=author,
+            source_account=source_account,
             content_type=content_type,
-            text=(text or "").strip(),
+            text=text,
             location=(location or "").strip(),
             image_bytes=img_bytes,
         )

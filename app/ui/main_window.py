@@ -195,7 +195,7 @@ class MainWindow(QMainWindow):
         self.results_page.add_result(result)
         self.tabs.setCurrentIndex(2)  # switch to Results tab
         self.status_label.setText(
-            f"Último: @{result.username} | Prob. {result.probability}"
+            f"Último: @{result.author} | Prob. {result.probability}"
         )
 
     def _on_scan_done(self):

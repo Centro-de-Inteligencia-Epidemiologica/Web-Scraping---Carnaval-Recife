@@ -97,7 +97,7 @@ class ScrapeWorker(QThread):
                     continue
 
             self.progress.emit(
-                f"LLM ← {item.content_type} de @{item.username}"
+                f"LLM ← {item.content_type} de @{item.author}"
             )
             result = analyzer.analyze(item, cfg.keywords)
 
