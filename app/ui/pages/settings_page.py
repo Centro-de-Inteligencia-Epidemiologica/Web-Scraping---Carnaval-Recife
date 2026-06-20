@@ -4,11 +4,13 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QGroupBox,
-    QComboBox, QSpinBox, QCheckBox, QTextEdit,
+    QComboBox, QSpinBox, QCheckBox, QTextEdit, QMessageBox,
 )
 
 from app.config import Config
 from app.worker import LoginWorker
+from app import bootstrap
+from app.ui.bootstrap_dialog import BootstrapDialog
 
 
 class SettingsPage(QWidget):
@@ -94,6 +96,25 @@ class SettingsPage(QWidget):
         opt_form.addRow(self.analyze_all_cb)
         root.addWidget(opt_box)
 
+        # ── Dependencies ─────────────────────────────────────────
+        dep_box = QGroupBox("Dependências")
+        dep_lay = QVBoxLayout(dep_box)
+
+        self.dep_status = QLabel()
+        self.dep_status.setTextFormat(Qt.TextFormat.RichText)
+        dep_lay.addWidget(self.dep_status)
+
+        dep_btn_row = QHBoxLayout()
+        self.install_deps_btn = QPushButton("Instalar dependências")
+        self.recheck_deps_btn = QPushButton("Verificar novamente")
+        dep_btn_row.addWidget(self.install_deps_btn)
+        dep_btn_row.addWidget(self.recheck_deps_btn)
+        dep_btn_row.addStretch()
+        dep_lay.addLayout(dep_btn_row)
+        root.addWidget(dep_box)
+
+        self._refresh_dep_status()
+
         # ── Save ──────────────────────────────────────────────────
         save_btn = QPushButton("Salvar Configurações")
         save_btn.setFixedHeight(36)
@@ -113,8 +134,53 @@ class SettingsPage(QWidget):
         self.login_browser_btn.clicked.connect(lambda: self._start_login(headless=False))
         test_btn.clicked.connect(self._test_llm)
         save_btn.clicked.connect(self._save)
+        self.install_deps_btn.clicked.connect(self._install_dependencies)
+        self.recheck_deps_btn.clicked.connect(self._refresh_dep_status)
 
     # ------------------------------------------------------------------
+
+    def _refresh_dep_status(self):
+        """Probe Chromium / Ollama / models and render a colored summary."""
+        def mark(ok: bool, label: str) -> str:
+            color = "green" if ok else "#c62828"
+            glyph = "✔" if ok else "✘"
+            return f'<span style="color:{color};">{glyph} {label}</span>'
+
+        endpoint = self.endpoint_edit.text().strip() or self.config.ollama_endpoint
+        models = [self.text_model_edit.text().strip(), self.vision_model_edit.text().strip()]
+
+        has_chromium = bootstrap.chromium_installed()
+        has_ollama = bootstrap.ollama_exe_path() is not None
+        server_up = bootstrap.ollama_server_up(endpoint)
+        missing = bootstrap.missing_models(endpoint, models) if server_up else models
+
+        rows = [
+            mark(has_chromium, "Navegador Chromium"),
+            mark(has_ollama, "Ollama instalado"),
+            mark(server_up, "Servidor Ollama ativo"),
+            mark(not missing, "Modelos: " + (", ".join(models) if not missing
+                                             else "faltando " + ", ".join(missing))),
+        ]
+        self.dep_status.setText("<br>".join(rows))
+
+    def _install_dependencies(self):
+        """Manual entry point in case the first-run prompt was skipped."""
+        self._save()
+        endpoint = self.config.ollama_endpoint
+        models = [self.config.text_model, self.config.vision_model]
+        plan = bootstrap.compute_plan(endpoint, models)
+
+        if not bootstrap.plan_has_work(plan):
+            QMessageBox.information(
+                self, "Dependências",
+                "Todas as dependências já estão instaladas."
+            )
+            self._refresh_dep_status()
+            return
+
+        dlg = BootstrapDialog(endpoint, models, plan, self)
+        dlg.exec()
+        self._refresh_dep_status()
 
     def _refresh_session_label(self):
         path = Path(self.config.state_path)

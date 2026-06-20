@@ -9,6 +9,11 @@ ig_state.json
 debug_*.png
 *.screenshot.png
 
+# PyInstaller build output (keep the .spec + build scripts, drop the artifacts)
+dist/
+build/
+build_tmp/
+
 # Python
 __pycache__/
 *.py[cod]
