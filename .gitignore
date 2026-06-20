@@ -13,6 +13,7 @@ debug_*.png
 dist/
 build/
 build_tmp/
+*.zip
 
 # Python
 __pycache__/
