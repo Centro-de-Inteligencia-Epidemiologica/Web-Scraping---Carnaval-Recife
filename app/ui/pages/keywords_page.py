@@ -27,7 +27,7 @@ class KeywordsPage(QWidget):
             "relacionados a estes termos, mesmo que a palavra exata não apareça."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: gray;")
+        hint.setStyleSheet("color: #cccccc;")
         root.addWidget(hint)
 
         self.list_widget = QListWidget()

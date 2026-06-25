@@ -75,7 +75,7 @@ class ResultsPage(QWidget):
         root.addWidget(self.table)
 
         note = QLabel("Duplo-clique numa linha para abrir a URL no navegador.")
-        note.setStyleSheet("color: gray; font-size: 11px;")
+        note.setStyleSheet("color: #cccccc; font-size: 11px;")
         root.addWidget(note)
 
     # ------------------------------------------------------------------
@@ -103,6 +103,7 @@ class ResultsPage(QWidget):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
             if col == _PROB_COL:
                 item.setBackground(QColor(prob_color))
+                item.setForeground(QColor("#000000"))
             self.table.setItem(row, col, item)
 
         self.table.scrollToBottom()

@@ -15,29 +15,6 @@ from app.ui.pages.keywords_page import KeywordsPage
 from app.ui.pages.results_page import ResultsPage
 from app.ui.pages.settings_page import SettingsPage
 
-_STYLE = """
-QMainWindow { background: #f5f5f5; }
-QTabWidget::pane { border: 1px solid #ccc; border-radius: 4px; }
-QTabBar::tab {
-    padding: 8px 18px;
-    font-size: 13px;
-}
-QTabBar::tab:selected {
-    background: #1976d2;
-    color: white;
-    border-radius: 4px 4px 0 0;
-}
-QPushButton {
-    padding: 6px 14px;
-    border-radius: 4px;
-    border: 1px solid #bbb;
-    background: #fff;
-}
-QPushButton:hover { background: #e3f2fd; }
-QPushButton:disabled { color: #aaa; }
-"""
-
-
 class MainWindow(QMainWindow):
     def __init__(self, config: Config):
         super().__init__()
@@ -46,7 +23,6 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("InstaEpi Monitor — Vigilância Epidemiológica")
         self.resize(1100, 720)
-        self.setStyleSheet(_STYLE)
 
         self._build_ui()
 
@@ -64,9 +40,9 @@ class MainWindow(QMainWindow):
         # Header
         hdr = QHBoxLayout()
         title = QLabel("InstaEpi Monitor")
-        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1976d2;")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #64b5f6;")
         subtitle = QLabel("Vigilância epidemiológica via Instagram")
-        subtitle.setStyleSheet("color: gray; font-size: 12px;")
+        subtitle.setStyleSheet("color: #cccccc; font-size: 12px;")
         hdr.addWidget(title)
         hdr.addWidget(subtitle, alignment=Qt.AlignmentFlag.AlignBottom)
         hdr.addStretch()
@@ -132,7 +108,7 @@ class MainWindow(QMainWindow):
         )
 
         self.status_label = QLabel("Pronto.")
-        self.status_label.setStyleSheet("color: #555;")
+        self.status_label.setStyleSheet("color: #cccccc;")
 
         toolbar.addWidget(self.start_btn)
         toolbar.addWidget(self.stop_btn)

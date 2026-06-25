@@ -29,7 +29,7 @@ class SourcesPage(QWidget):
             "As contas devem ser públicas ou seguidas pela conta configurada."
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: gray;")
+        hint.setStyleSheet("color: #cccccc;")
         root.addWidget(hint)
 
         # Table

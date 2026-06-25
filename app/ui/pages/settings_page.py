@@ -142,7 +142,7 @@ class SettingsPage(QWidget):
     def _refresh_dep_status(self):
         """Probe Chromium / Ollama / models and render a colored summary."""
         def mark(ok: bool, label: str) -> str:
-            color = "green" if ok else "#c62828"
+            color = "#4caf50" if ok else "#ef5350"
             glyph = "✔" if ok else "✘"
             return f'<span style="color:{color};">{glyph} {label}</span>'
 
@@ -186,10 +186,10 @@ class SettingsPage(QWidget):
         path = Path(self.config.state_path)
         if path.exists():
             self.session_label.setText(f"✔ Sessão salva em {self.config.state_path}")
-            self.session_label.setStyleSheet("color: green;")
+            self.session_label.setStyleSheet("color: #4caf50;")
         else:
             self.session_label.setText("✘ Sem sessão – faça login")
-            self.session_label.setStyleSheet("color: red;")
+            self.session_label.setStyleSheet("color: #ef5350;")
 
     def _start_login(self, headless: bool):
         if self._login_worker and self._login_worker.isRunning():
@@ -225,7 +225,7 @@ class SettingsPage(QWidget):
         )
         ok, msg = analyzer.test_connection()
         self.conn_label.setText(("✔ " if ok else "✘ ") + msg)
-        self.conn_label.setStyleSheet("color: green;" if ok else "color: red;")
+        self.conn_label.setStyleSheet("color: #4caf50;" if ok else "color: #ef5350;")
 
     def _save(self):
         self.config.ig_username = self.user_edit.text().strip()

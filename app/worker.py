@@ -20,20 +20,32 @@ class LoginWorker(QThread):
         self.headless = headless
 
     def run(self):
-        scraper = InstagramScraper(
-            self.config.ig_username,
-            self.config.ig_password,
-            self.config.state_path,
-        )
-
-        async def _do():
-            ok, msg = await scraper.login(
-                headless=self.headless,
-                progress_cb=lambda m: self.progress.emit(m),
+        try:
+            scraper = InstagramScraper(
+                self.config.ig_username,
+                self.config.ig_password,
+                self.config.state_path,
             )
-            self.finished.emit(ok, msg)
 
-        asyncio.run(_do())
+            async def _do():
+                ok, msg = await scraper.login(
+                    headless=self.headless,
+                    progress_cb=lambda m: self.progress.emit(m),
+                )
+                self.finished.emit(ok, msg)
+
+            asyncio.run(_do())
+        except Exception as exc:
+            # Never die silently: a launch failure here (e.g. Chromium not
+            # installed) would otherwise leave the buttons disabled and
+            # nothing happening on screen.
+            self.progress.emit(f"Falha ao iniciar o navegador: {exc}")
+            self.finished.emit(
+                False,
+                "Não foi possível abrir o navegador. Verifique se o Chromium "
+                "está instalado em Configurações → Dependências. Detalhe: "
+                f"{exc}",
+            )
 
 
 class ScrapeWorker(QThread):
