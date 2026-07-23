@@ -71,6 +71,13 @@ jobs:
         with:
           ref: ${{ env.TARGET_REF }}
 
+      # Packaging assets (icon, .desktop, AppRun) come from the workflow's own
+      # ref, NOT from TARGET_REF -- older tags predate packaging/linux/ and
+      # would otherwise fail to assemble the AppDir when backfilling.
+      - uses: actions/checkout@v4
+        with:
+          path: ci-assets
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -105,10 +112,10 @@ jobs:
         run: |
           mkdir -p AppDir/usr/bin
           cp -r dist/InstaEpiMonitor/. AppDir/usr/bin/
-          cp packaging/linux/instaepimonitor.png AppDir/instaepimonitor.png
-          cp packaging/linux/instaepimonitor.png AppDir/.DirIcon
-          cp packaging/linux/instaepimonitor.desktop AppDir/instaepimonitor.desktop
-          cp packaging/linux/AppRun AppDir/AppRun
+          cp ci-assets/packaging/linux/instaepimonitor.png AppDir/instaepimonitor.png
+          cp ci-assets/packaging/linux/instaepimonitor.png AppDir/.DirIcon
+          cp ci-assets/packaging/linux/instaepimonitor.desktop AppDir/instaepimonitor.desktop
+          cp ci-assets/packaging/linux/AppRun AppDir/AppRun
           chmod +x AppDir/AppRun
 
       - name: Download appimagetool
