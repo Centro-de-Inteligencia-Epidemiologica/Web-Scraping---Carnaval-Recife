@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=InstaEpi Monitor
+Comment=Vigilancia Epidemiologica via Instagram
+Exec=InstaEpiMonitor
+Icon=instaepimonitor
+Categories=Utility;
+Terminal=false
