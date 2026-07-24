@@ -15,6 +15,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
@@ -40,15 +41,27 @@ def _noop(_: str) -> None:
 # Detection
 # ----------------------------------------------------------------------
 
+def _default_browsers_path() -> Optional[Path]:
+    """Playwright's own per-OS default browser cache directory."""
+    if sys.platform == "win32":
+        local = os.environ.get("LOCALAPPDATA")
+        return Path(local) / "ms-playwright" if local else None
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Caches" / "ms-playwright"
+    xdg = os.environ.get("XDG_CACHE_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".cache"
+    return base / "ms-playwright"
+
+
 def chromium_installed() -> bool:
     """True if a Playwright Chromium build exists in the browser cache."""
     candidates: List[Path] = []
     env_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
     if env_path and env_path != "0":
         candidates.append(Path(env_path))
-    local = os.environ.get("LOCALAPPDATA")
-    if local:
-        candidates.append(Path(local) / "ms-playwright")
+    default = _default_browsers_path()
+    if default:
+        candidates.append(default)
     for base in candidates:
         try:
             if base.exists() and (
@@ -146,7 +159,7 @@ def _driver_cmd():
     except Exception:
         import playwright
         base = Path(playwright.__file__).parent / "driver"
-        node = base / "node.exe"
+        node = base / ("node.exe" if sys.platform == "win32" else "node")
         cli = base / "package" / "cli.js"
         return [str(node), str(cli)], dict(os.environ)
 
@@ -185,7 +198,22 @@ def install_ollama(log: LogFn = _noop, wait_seconds: int = 600) -> Optional[str]
 
     Returns the ollama.exe path once detected, or None on timeout/failure.
     The installer shows its own UI (and a UAC prompt) — the user completes it.
+
+    Windows only: the official installer is a .exe. On Linux/macOS there's no
+    unattended equivalent we can run from here (the official script needs
+    sudo), so we just point the user at it instead of silently failing after
+    downloading ~700 MB they can't use.
     """
+    if sys.platform != "win32":
+        log("✘ Ollama não encontrado.")
+        if sys.platform == "darwin":
+            log("  Instale manualmente: baixe em https://ollama.com/download")
+        else:
+            log("  Instale manualmente executando no terminal:")
+            log("    curl -fsSL https://ollama.com/install.sh | sh")
+            log("  (requer sua senha de administrador) e depois reabra o InstaEpi Monitor.")
+        return None
+
     dest = Path(tempfile.gettempdir()) / "OllamaSetup.exe"
     log("Baixando o instalador do Ollama (~700 MB)…")
     try:
